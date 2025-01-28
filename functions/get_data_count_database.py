@@ -1,12 +1,13 @@
 import sys
 from config import ibbi_config
 
-connection = ibbi_config.db_connection()
-cursor = connection.cursor()
 
 
 def get_data_count_database():
     
+    connection = ibbi_config.db_connection()
+    cursor = connection.cursor()
+ 
     try:
         print("get_data_count_database function is called")
         cursor.execute("SELECT COUNT(*) FROM ibbi_claims_process;")

@@ -1,7 +1,7 @@
 import sys
 import traceback
 from config import ibbi_config
-from functions import extract_all_data_in_website, log, check_increment_data, check
+from functions import extract_all_data_in_website, log, check_increment_data
 
 
 def main():
@@ -10,7 +10,7 @@ def main():
         # extract_all_data_in_website.extract_all_data_in_website()
         
         first_excel_sheet_name =f"first_excel_sheet_{ibbi_config.current_date}.xlsx"
-        first_exceL_sheet_path = fr"C:\Users\Premkumar.8265\Desktop\ibbi_claims_process\data\first_excel_sheet\{first_excel_sheet_name}"
+        first_exceL_sheet_path = fr"C:\Users\Premkumar.8265\Desktop\ibbi_claims_process\ibbi_claim_process_personal\data\first_excel_sheet\{first_excel_sheet_name}"
         
         check_increment_data.check_increment_data(first_exceL_sheet_path)
         print("finsihed")
