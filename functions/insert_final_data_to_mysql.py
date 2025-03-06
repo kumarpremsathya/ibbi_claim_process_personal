@@ -4,6 +4,7 @@ import pandas as pd
 import mysql.connector
 from config import ibbi_config
 from functions import  send_mail, log
+from datetime import datetime
 
 
 
@@ -19,39 +20,97 @@ def insert_final_data_to_mysql(data_rows):
     count = 0
     try:
         df = pd.DataFrame(data_rows) if isinstance(data_rows, list) else pd.DataFrame([data_rows])
+        df['appearance_date'] = datetime.now().strftime('%Y-%m-%d')
         for index, data_row in df.iterrows():
-            query = """
-            INSERT INTO ibbi_claims_process (
-                source_name, corporate_debtor, name_of_irp_rp_liquidator, 
-                under_process, latest_claim_as_on_date, view_details, 
-                header_information, claims_details, pdf_links, 
-                pdf_names, pdf_relative_paths
-            ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-            )
-            """
 
+            check_query = f"""
+                SELECT appearance_count
+                FROM {ibbi_config.table_name}
+                WHERE corporate_debtor = %s 
+                AND name_of_irp_rp_liquidator = %s 
+                AND under_process = %s 
+                AND latest_claim_as_on_date = %s 
+                AND view_details = %s
+                ORDER BY appearance_count DESC LIMIT 1
+            """
             values = (
-                'ibbi_claims_process',  # source_name
-                data_row['corporate_debtor'],
-                data_row['name_of_irp_rp_liquidator'],
-                data_row['under_process'],
-                data_row['latest_claim_as_on_date'],
-                data_row['view_details'],
-                data_row.get('Header_Information', '{}'),
-                data_row.get('Claims_Details', '{}'),
-                data_row.get('PDF_Links', '[]'),
-                data_row.get('PDF_Names', '[]'),
-                data_row.get('Relative_Paths', '[]')
-            )
-            
-            cursor.execute(query, values)
-            count += 1
-            print(f"Successfully inserted data for {data_row['corporate_debtor']}")
-            print(f"Current count of inserted rows: {count}")
+                    data_row ['corporate_debtor'],
+                    data_row ['name_of_irp_rp_liquidator'],
+                    data_row ['under_process'],
+                    data_row ['latest_claim_as_on_date'],
+                    data_row ['view_details']
+                )
+            cursor.execute(check_query, values)
+            result = cursor.fetchone()
+
+            if result:
+                # Record exists, update appearance_count (increment it)
+                appearance_count = int(result[0]) + 1
+                query = """
+                INSERT INTO ibbi_claims_process (
+                    source_name, corporate_debtor, name_of_irp_rp_liquidator, 
+                    under_process, latest_claim_as_on_date, view_details, 
+                    header_information, claims_details, pdf_links, 
+                    pdf_names, pdf_relative_paths, appearance_date, appearance_count
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                """
+
+                values = (
+                    'ibbi_claims_process',  # source_name
+                    data_row['corporate_debtor'],
+                    data_row['name_of_irp_rp_liquidator'],
+                    data_row['under_process'],
+                    data_row['latest_claim_as_on_date'],
+                    data_row['view_details'],
+                    data_row.get('Header_Information', '{}'),
+                    data_row.get('Claims_Details', '{}'),
+                    data_row.get('PDF_Links', '[]'),
+                    data_row.get('PDF_Names', '[]'),
+                    data_row.get('Relative_Paths', '[]'),
+                    data_row['appearance_date'],
+                    appearance_count 
+                )
                 
-        connection.commit()  # Commit after all insertions
-        print(f"Total rows inserted: {count}")
+                cursor.execute(query, values)
+                count += 1
+
+            else:
+                query = """
+                INSERT INTO ibbi_claims_process (
+                    source_name, corporate_debtor, name_of_irp_rp_liquidator, 
+                    under_process, latest_claim_as_on_date, view_details, 
+                    header_information, claims_details, pdf_links, 
+                    pdf_names, pdf_relative_paths, appearance_date, appearance_count
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                """
+
+                values = (
+                    'ibbi_claims_process',  # source_name
+                    data_row['corporate_debtor'],
+                    data_row['name_of_irp_rp_liquidator'],
+                    data_row['under_process'],
+                    data_row['latest_claim_as_on_date'],
+                    data_row['view_details'],
+                    data_row.get('Header_Information', '{}'),
+                    data_row.get('Claims_Details', '{}'),
+                    data_row.get('PDF_Links', '[]'),
+                    data_row.get('PDF_Names', '[]'),
+                    data_row.get('Relative_Paths', '[]'),
+                    data_row['appearance_date'],
+                    1
+                )
+                
+                cursor.execute(query, values)
+                count += 1
+                print(f"Successfully inserted data for {data_row['corporate_debtor']}")
+                print(f"Current count of inserted rows: {count}")
+                    
+            connection.commit()  # Commit after all insertions
+            print(f"Total rows inserted: {count}")
 
         ibbi_config.log_list[1] = "Success"
         ibbi_config.no_data_scraped = count

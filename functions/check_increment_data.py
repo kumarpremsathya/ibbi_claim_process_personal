@@ -1,4 +1,3 @@
-
 import sys
 import traceback
 import pandas as pd
@@ -10,7 +9,6 @@ from functions import scrape_claim_details_and_download_pdf, log, send_mail, rem
 def get_deleted_data_as_objects(deleted_data_df):
     """Get only those deleted records that don't have a removal_date yet"""
     
-
     connection = ibbi_config.db_connection()
     cursor = connection.cursor()
 
@@ -26,6 +24,7 @@ def get_deleted_data_as_objects(deleted_data_df):
             AND under_process = %s 
             AND latest_claim_as_on_date = %s 
             AND view_details = %s
+            AND removal_date IS NULL
         """
         check_values = (
             row['corporate_debtor'],
@@ -65,7 +64,8 @@ def check_increment_data(excel_path):
         xl_df = pd.read_excel(excel_path)
         excel_df = xl_df.drop_duplicates() # remove duplicates
 
-        database_df = db_df.drop(columns=['sr_no', 'source_name', 'header_information', 'claims_details', 'pdf_links','pdf_names', 'pdf_relative_paths', 'updated_date','removal_date', 'date_scraped'])
+        # Filter out records with removal_date
+        database_df = db_df[db_df['removal_date'].isnull()].drop(columns=['sr_no', 'source_name', 'header_information', 'claims_details', 'pdf_links','pdf_names', 'pdf_relative_paths', 'updated_date','appearance_date', 'appearance_count', 'removal_date', 'date_scraped'])
         print("database columns", db_df.columns)
         print("excel columns", excel_df.columns)
 
@@ -78,7 +78,6 @@ def check_increment_data(excel_path):
         print("\nSample from Excel:")
         print(xl_df.head(1).to_string())
         
-        
         # Check data types of columns
         print("\nDatabase column types:")
         print(database_df.dtypes)
@@ -89,8 +88,8 @@ def check_increment_data(excel_path):
         print("\nSample values comparison:")
         for col in database_df.columns:
             print(f"\nColumn: {col}")
-            print("Database first value:", repr(database_df[col].iloc[0]))
-            print("Excel first value:", repr(excel_df[col].iloc[0]))
+            print("Database first value:", repr(database_df[col].iloc[0])) if not database_df.empty else "No data"
+            print("Excel first value:", repr(excel_df[col].iloc[0])) if not excel_df.empty else "No data"
 
         database_df.columns = database_df.columns.str.strip().str.lower()
         excel_df.columns = excel_df.columns.str.strip().str.lower()
@@ -108,31 +107,36 @@ def check_increment_data(excel_path):
         print("\nRows in database but not in Excel (Deleted Data):")
         print(deleted_data)
 
+        # Initialize variables
+        update_new_deleted_count = 0
+        deleted_records = []
         
         # Get deleted records and update removal_date
         if not deleted_data.empty:
-
             # Get only records that don't have removal_date
             deleted_records = get_deleted_data_as_objects(deleted_data)
             print(f"Total deleted records found: {len(deleted_data)}")
             print(f"New deleted records (without removal date): {len(deleted_records)}")
 
-            update_new_deleted_count, skipped_count = removal_date.update_removal_date(deleted_records)
+            print(f"Total deleted records found: {len(deleted_data)}")
+            update_new_deleted_count = removal_date.update_removal_date(deleted_data)
 
         ibbi_config.no_data_avaliable = len(new_data)
         ibbi_config.no_data_scraped = len(new_data)
-        ibbi_config.deleted_source_count = len(deleted_data)
+        # ibbi_config.deleted_source_count = len(deleted_data)
 
         ibbi_config.deleted_source_count = update_new_deleted_count
         ibbi_config.deleted_source = deleted_records
 
-        print( "missing rows in database", len(new_data))
+        print("missing rows in database", len(new_data))
         print("missing rows in Excel", len(deleted_data))
        
         if update_new_deleted_count > 0 and len(new_data) == 0:
             ibbi_config.log_list[1] = "Success"
-            
-            ibbi_config.log_list[3] = "Some data are deleted in the website"
+            ibbi_config.log_list[3] = f"{ibbi_config.deleted_source_count} datas are deleted in the website"
+            log.insert_log_into_table(ibbi_config.log_list)
+            ibbi_config.log_list = [None] * 4
+            sys.exit()
             log.insert_log_into_table(ibbi_config.log_list)
             # print("log table====", ibbi_config.log_list)
             ibbi_config.log_list = [None] * 4
@@ -155,7 +159,7 @@ def check_increment_data(excel_path):
         # missing_rows_in_db.to_excel(increment_data_excel_path, index=False)
         pd.DataFrame(new_data).to_excel(increment_data_excel_path, index=False)
        
-        # scrape_claim_details_and_download_pdf.scrape_claim_details_and_download_pdf(increment_data_excel_path)
+        scrape_claim_details_and_download_pdf.scrape_claim_details_and_download_pdf(increment_data_excel_path)
  
     except Exception as e:
         traceback.print_exc()

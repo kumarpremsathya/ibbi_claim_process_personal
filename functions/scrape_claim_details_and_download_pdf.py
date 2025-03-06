@@ -342,7 +342,7 @@ def scrape_claim_details_and_download_pdf(increment_data_excel_path):
         df = pd.read_excel(increment_data_excel_path)
 
         # # # Use iloc to select specific rows (as in your example)
-        df = df.iloc[:]
+        df = df.iloc[:20]
  
         combined_rows = [] 
         for index, row in df.iterrows():
@@ -372,7 +372,7 @@ def scrape_claim_details_and_download_pdf(increment_data_excel_path):
                     print("df_final", df_final)
                    
                     final_excel_sheet_name = f"final_sheet_{ibbi_config.current_date}.xlsx"
-                    final_excel_sheet_path = fr"C:\Users\Premkumar.8265\Desktop\ibbi_claims_process\data\final_excel_sheet\{final_excel_sheet_name}"
+                    final_excel_sheet_path = fr"C:\Users\Premkumar.8265\Desktop\ibbi_claims_process\ibbi_claim_process_personal\data\final_excel_sheet\{final_excel_sheet_name}"
 
                     df_final.to_excel(final_excel_sheet_path, index=False)
                 

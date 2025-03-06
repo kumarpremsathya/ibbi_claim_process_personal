@@ -84,8 +84,8 @@ def extract_all_data_in_website():
            
             first_excel_sheet_name = f"first_excel_sheet_{ibbi_config.current_date}.xlsx"
         
-            first_exceL_sheet_path = rf"C:\Users\Premkumar.8265\Desktop\ibbi_claims_process\data\first_excel_sheet\{first_excel_sheet_name}"
-
+            first_exceL_sheet_path = rf"C:\Users\Premkumar.8265\Desktop\ibbi_claims_process\ibbi_claim_process_personal\data\first_excel_sheet\{first_excel_sheet_name}"
+            
             # Remove duplicates from the original DataFrame
             # df_unique = df.drop_duplicates()
 
